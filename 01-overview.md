@@ -72,13 +72,13 @@ Data passes through the following parts on its way between system memory and a N
 
 **Where the buffers are.** The data buffers and the parity buffers are storage inside the NAND controller block of the SoC (register window at CPU address `0x38a00000`). They have **no address**: neither the CPU memory map nor the register window maps their bytes to any address range.
 
-- No word of the register window is known to give access to a parity buffer: the read / write matrix of all 1024 window words, from the CPU and from the sequencer, found none that does (device, [D-access-27](14-evidence.md#142105-access-run-27)).
+- No word of the register window is known to give access to a parity buffer: the read / write matrix of all 1024 window words, from the CPU and from the sequencer, found none that does (device, [`access`](14-evidence.md#142105-access-run-27)).
 - The word `FMC_FIFO` (`0x080`, the **FIFO port**) is the only window word through which data from the chip has been read. The original READID program uses it in this order (observed, [RE-24](14-evidence.md#14324-re-24-readid-sequence); the third-party driver does the same):
   1. It reads 8 bytes from the chip (`FMC_DATA_SEL` = 1, `FMCTRL1` = `0x1c2`).
   2. It sets `FMC_DATA_SEL` = `0x100` and `FMCTRL1` = `0x340`.
   3. It reads `0x080` twice and obtains the 8 ID bytes in order.
 
-  The FIFO port does not read a data buffer that a DMA filled (device, [D-bufport-36](14-evidence.md#142154-bufport-run-36)): after data buffer 0 or 1 (and parity buffer 0) was filled by DMA with a known pattern, 130 reads of `0x080` returned 0, with and without `FMCTRL1` = `0x340`. Each read advanced `FMC_28` by 4 (0, 128, 256, 384 after every 32 reads, wrapping at 512), so `FMC_28` is the FIFO port's read position. 128 writes to `0x080` after `FMCTRL1` = `0x340` changed 26 of the 128 words of data buffer 0. Whether the bytes of a READ ID are held in a data buffer or in separate storage is open.
+  The FIFO port does not read a data buffer that a DMA filled (device, [`bufport`](14-evidence.md#142154-bufport-run-36)): after data buffer 0 or 1 (and parity buffer 0) was filled by DMA with a known pattern, 130 reads of `0x080` returned 0, with and without `FMCTRL1` = `0x340`. Each read advanced `FMC_28` by 4 (0, 128, 256, 384 after every 32 reads, wrapping at 512), so `FMC_28` is the FIFO port's read position. 128 writes to `0x080` after `FMCTRL1` = `0x340` changed 26 of the 128 words of data buffer 0. Whether the bytes of a READ ID are held in a data buffer or in separate storage is open.
 - All other ways into and out of a buffer are transfers. They are the chip transfers and DMAs of the NAND controller (`FMCTRL1`), the ECC operations (`ECC_KICK`) and the metadata path (`FMC_METACTL`).
 
 ### 1.5.1 System memory
@@ -89,8 +89,8 @@ Data passes through the following parts on its way between system memory and a N
 
 ### 1.5.2 Data buffer 0 and data buffer 1
 
-- **Where:** inside the NAND controller, belonging to channel 0 (`0x000` register set); no address (see "Where the buffers are" above). The CPU and a program reach their bytes only through a DMA, a chip transfer or an ECC operation; reads of the FIFO port returned 0 for them (%s). Channel 1 (`0x400` register set) has its own data buffers 0 and 1: a pattern DMA-ed into each through the `0x400` set came back unchanged ([D-ch1buf-37](14-evidence.md#142166-ch1buf-run-37)).
-- **Size:** 512 bytes each: a DMA always moves exactly 512 bytes into or out of one, whatever `FMC_DNUM` holds (device, [D-bufsize-27](14-evidence.md#142103-bufsize-run-27)).
+- **Where:** inside the NAND controller, belonging to channel 0 (`0x000` register set); no address (see "Where the buffers are" above). The CPU and a program reach their bytes only through a DMA, a chip transfer or an ECC operation; reads of the FIFO port returned 0 for them (%s). Channel 1 (`0x400` register set) has its own data buffers 0 and 1: a pattern DMA-ed into each through the `0x400` set came back unchanged ([`ch1buf`](14-evidence.md#142166-ch1buf-run-37)).
+- **Size:** 512 bytes each: a DMA always moves exactly 512 bytes into or out of one, whatever `FMC_DNUM` holds (device, [`bufsize`](14-evidence.md#142103-bufsize-run-27)).
 - **Selected by** one-hot fields, one for each direction of transfer (device):
 
   | operation | field | data buffer 0 | data buffer 1 |
@@ -104,8 +104,8 @@ Data passes through the following parts on its way between system memory and a N
 
 ### 1.5.3 Parity buffer 0 and parity buffer 1
 
-- **Where:** inside the NAND controller; no address and no known window port (see "Where the buffers are" above). DMAs through the `0x400` register set (channel 1) into parity buffer 0 and 1 came back unchanged, and after the one into parity buffer 0, channel 0's parity buffer 0 read back channel 1's pattern; so parity buffer 0 is one buffer shared by both channels (inferred, [D-ch1buf-37](14-evidence.md#142166-ch1buf-run-37)). A set-up word written to channel 1's `FMCTRL1` (`0x404`) left channel 0's parity buffer 0 reading all `0xff` (same evidence).
-- **Size:** 64 bytes each, divided into four slots (1.5.4): a 512-byte DMA into a parity buffer wraps around within the 64 bytes, so the buffer ends up holding the last 64 bytes of the source (device, [D-eccchunk-29](14-evidence.md#142112-eccchunk-run-29)).
+- **Where:** inside the NAND controller; no address and no known window port (see "Where the buffers are" above). DMAs through the `0x400` register set (channel 1) into parity buffer 0 and 1 came back unchanged, and after the one into parity buffer 0, channel 0's parity buffer 0 read back channel 1's pattern; so parity buffer 0 is one buffer shared by both channels (inferred, [`ch1buf`](14-evidence.md#142166-ch1buf-run-37)). A set-up word written to channel 1's `FMCTRL1` (`0x404`) left channel 0's parity buffer 0 reading all `0xff` (same evidence).
+- **Size:** 64 bytes each, divided into four slots (1.5.4): a 512-byte DMA into a parity buffer wraps around within the 64 bytes, so the buffer ends up holding the last 64 bytes of the source (device, [`eccchunk`](14-evidence.md#142112-eccchunk-run-29)).
 - **Selected by** (device):
 
   | operation | field | parity buffer 0 | parity buffer 1 | which slot |

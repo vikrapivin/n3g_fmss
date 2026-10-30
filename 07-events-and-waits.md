@@ -27,15 +27,15 @@ The original programs clear each flag after the `wait` that used it, and begin e
 Events are levels, not one-shot signals.
 
 - A `wait` does not consume its event: `wait` events 0 and 5 each passed twice in a row.
-- A `wait` event whose flag an earlier run left set passes at once.
+- A `wait` event whose flag a previous program left set passes at once.
 - `wait` event 4 passes on any `ECC_DONE` bit other than bit 4. It still passed after bit 0 was acknowledged and the value `0x74` was left over.
 
 Further event numbers (device, [chapter 16, section 16.2](16-device-findings.md#162-settled-on-a-device)):
 
-- `wait` events 6, 7, 8 and 9 are the command, address, DMA and transfer flags of the second register set ([chapter 9, section 9.5](09-nand-controller.md#95-the-second-nand-controller-register-set-0x400)). They are bits 1, 2, 20 and 3 of word `0x448`, the same bit numbers as `wait` events 0, 1, 2 and 3 use in the first set. `wait` event 8 is the DMA-done flag of the second set: a loopback from system memory into a data buffer and back to system memory through the second set passed `wait` event 8 and did not pass `wait` event 2. `wait` event 8 also passed while a second-set DMA was running ([D-evsweep3-37](14-evidence.md#142167-evsweep3-run-37)), and after a page read of CE0 through the first register set, whose DMA flags had been acknowledged ([D-w2state-36](14-evidence.md#142151-w2state-run-36); why is open).
+- `wait` events 6, 7, 8 and 9 are the command, address, DMA and transfer flags of the second register set ([chapter 9, section 9.5](09-nand-controller.md#95-the-second-nand-controller-register-set-0x400)). They are bits 1, 2, 20 and 3 of word `0x448`, the same bit numbers as `wait` events 0, 1, 2 and 3 use in the first set. `wait` event 8 is the DMA-done flag of the second set: a loopback from system memory into a data buffer and back to system memory through the second set passed `wait` event 8 and did not pass `wait` event 2. `wait` event 8 also passed while a second-set DMA was running ([`evsweep3`](14-evidence.md#142167-evsweep3-run-37)), and after a page read of CE0 through the first register set, whose DMA flags had been acknowledged ([`w2state`](14-evidence.md#142151-w2state-run-36); why is open).
 - `wait` event 11 passes in every state tried, including while a chip erases, so it is not the chips' ready line.
-- `wait` event 15 passed only in early runs where word `0x044` had been left non-zero. It did not pass with every `0x044` / `0x844` enable written on and a command flag pending ([D-evsweep2-35](14-evidence.md#142137-evsweep2-run-35)), nor with each `0x044` bit 0, 1, 2, 11 and 12 set and its own flag pending ([D-irqop-37](14-evidence.md#142170-irqop-run-37)). So it is not "an enabled source is pending"; what it waits for is open.
-- `wait` events 10 and 12 to 14 never passed, and neither did event numbers above 15. This held also during an erase, a page program, a page read, an ECC encode and decode, a DMA, a parity-buffer DMA, a second-set DMA, a meta encode and decode and a chip data write ([D-evsweep2-35](14-evidence.md#142137-evsweep2-run-35), [D-evsweep3-37](14-evidence.md#142167-evsweep3-run-37)).
+- `wait` event 15 passed only in early tests where word `0x044` had been left non-zero. It did not pass with every `0x044` / `0x844` enable written on and a command flag pending ([`evsweep2`](14-evidence.md#142137-evsweep2-run-35)), nor with each `0x044` bit 0, 1, 2, 11 and 12 set and its own flag pending ([`irqop`, device run 37](14-evidence.md#142170-irqop-run-37)). So it is not "an enabled source is pending"; what it waits for is open.
+- `wait` events 10 and 12 to 14 never passed, and neither did event numbers above 15. This held also during an erase, a page program, a page read, an ECC encode and decode, a DMA, a parity-buffer DMA, a second-set DMA, a meta encode and decode and a chip data write ([`evsweep2`](14-evidence.md#142137-evsweep2-run-35), [`evsweep3`](14-evidence.md#142167-evsweep3-run-37)).
 
 ### 7.1.1 Rules for `wait` event 5
 
@@ -47,7 +47,7 @@ Further event numbers (device, [chapter 16, section 16.2](16-device-findings.md#
   - A latch made with the wrong select (`FMC_DATA_SEL = 0x100`) also uses up the arm.
   - Every latch updates `FMC_NSTAT`.
 - **What arms it.** These re-arm it: an `FMCTRL1` operation (the set-up word, `0x100e0`, a transfer from the chip with `0x32`, a DMA with `0x2e0`), address cycles (`FMCTRL1 = 1`), and the polled chip becoming ready. These do not re-arm it: `FMCTRL1 = 0x20`, the status-clear word (`FMC_STATUS` = `0x0ff00ffe`), a CE deselect followed by a reselect, and an ECC operation.
-- **Consequence for repeated latches.** Suppose two latches have only `FMCTRL1 = 0x20` and a fresh `70h` command (or a chip reset `FFh`) between them. Then one `wait` event 5 passes and the other times out. With only a fresh `70h` between two latches, the second `wait` event 5 timed out 40 of 40 times ([D-latchrep-35](14-evidence.md#142141-latchrep-run-35)).
+- **Consequence for repeated latches.** Suppose two latches have only `FMCTRL1 = 0x20` and a fresh `70h` command (or a chip reset `FFh`) between them. Then one `wait` event 5 passes and the other times out. With only a fresh `70h` between two latches, the second `wait` event 5 timed out 40 of 40 times ([`latchrep`](14-evidence.md#142141-latchrep-run-35)).
 - **Two chips.** Two chips were programmed and then polled.
   - Polling the first chip (which waits for ready) and then the second passed both `wait` event 5.
   - Polling the second chip first (the one that finishes later) and then the first timed out on the first chip. The first chip's ready transition had already happened before the earlier latch.
@@ -55,7 +55,7 @@ Further event numbers (device, [chapter 16, section 16.2](16-device-findings.md#
 - **After a latch.** The controller is in status mode and refuses the next command byte until `FMCTRL1 = 0x20`: after the command write, `FMC_STATUS` bit 1 (command sent) stays clear and bit 26 is set instead; the original programs write `0x20` before `00h`. A latch after `90h` instead of `70h` sets no bit 23.
 - **Timing.** A status poll during an erase passed `wait` event 5 once the chip was ready (about 155 us in), with the status byte going from `0x81` to `0xc0`; an idle chip passes at once.
 - **Reads.** A sequencer read of `FMC_STATUS` or `FMC_NSTAT` does not consume an event.
-- **Repeatability.** 160 single latches (with and without a fresh arm before them, with and without `0x044` / `0x844` written) all passed, with bit 23 set and bit 24 clear ([D-latchrep-35](14-evidence.md#142141-latchrep-run-35)). A `wait` event 5 placed straight after the pair "`70h`, latch" timed out once, although bit 23 read set afterwards. Any instruction or wait between the latch and the `wait` event 5 made it pass (open).
+- **Repeatability.** 160 single latches (with and without a fresh arm before them, with and without `0x044` / `0x844` written) all passed, with bit 23 set and bit 24 clear ([`latchrep`](14-evidence.md#142141-latchrep-run-35)). A `wait` event 5 placed straight after the pair "`70h`, latch" timed out once, although bit 23 read set afterwards. Any instruction or wait between the latch and the `wait` event 5 made it pass (open).
 
 **The status latch needs `FMC_DATA_SEL = 1` (device).** After a write, with `FMC_DATA_SEL = 0x100` left from the data transfer, the latch returned `0x70` (the last command byte) instead of the chip's status. Bit 6 of `0x70` reads as "ready". The poll therefore ended while the chip was still programming, and the program command for the next page was ignored (those pages read back erased). With `FMC_DATA_SEL = 1` ([C7](11-nand-operations.md#1117-c7-ready-procedure-status-poll)) the status byte is the chip's. The status bytes are `0xc0` when ready and `0x81` when busy.
 
@@ -76,22 +76,22 @@ Every original program writes `FMSS_C4C` (fault vector) and `FMSS_C58` (value 4)
 `wait` and `wait2` (opcode `09`) both take a number N in their register field. Each waits until the hardware condition with that number is true, or faults after about 4.87 ms.
 
 - For `wait`, the numbers are the events of [chapter 7, section 7.1](#71-wait-events): `wait` event 0 is "command sent", `wait` event 1 is "address sent", and so on.
-- For `wait2`, the numbers are the CPU's interrupt sources. **`wait2` condition N is true while interrupt source N is raised in the raw status of the CPU's interrupt controllers**: VIC0 line N for N = 0..31 and VIC1 line N - 32 for N = 32..63 (device, [D-w2vic-38](14-evidence.md#142171-w2vic-run-38)). Numbers 64..255 never pass.
+- For `wait2`, the numbers are the CPU's interrupt sources. **`wait2` condition N is true while interrupt source N is raised in the raw status of the CPU's interrupt controllers**: VIC0 line N for N = 0..31 and VIC1 line N - 32 for N = 32..63 (device, [`w2vic`](14-evidence.md#142171-w2vic-run-38)). Numbers 64..255 never pass.
 
-How this was established: just before each `wait2 N` (N = 0..63) the program read both raw status words (`0x38e00008` for VIC0, `0x38e01008` for VIC1). In four states, idle and with three different interrupt sources raised, the pass or timeout of all 64 conditions matched the raw line, 64 of 64 each time ([D-w2vic-38](14-evidence.md#142171-w2vic-run-38)).
+How this was established: just before each `wait2 N` (N = 0..63) the program read both raw status words (`0x38e00008` for VIC0, `0x38e01008` for VIC1). In four states, idle and with three different interrupt sources raised, the pass or timeout of all 64 conditions matched the raw line, 64 of 64 each time ([`w2vic`](14-evidence.md#142171-w2vic-run-38)).
 
 Conditions seen true:
 
 | `wait2` condition N | interrupt line | when it was raised | seen |
 |---|---|---|---|
-| 5 | VIC0 line 5 | in every state of every run (a source outside the FMSS engine) | device |
+| 5 | VIC0 line 5 | in every state tried (a source outside the FMSS engine) | device |
 | 20 | VIC0 line 20, the NAND controller's line | while a NAND controller flag is pending and enabled in `0x044` (command flag with bit 0, DMA flag with bit 11, [chapter 3, section 3.4](03-cpu-memory-map.md#34-cpu-visible-interrupt-lines)) | device |
-| 33 | VIC1 line 1 | in every state of runs 29 to 34; in none of runs 35 to 38 (a source outside the FMSS engine) | device |
+| 33 | VIC1 line 1 | raised while the chip was idle in [`op09w33`](14-evidence.md#142123-op09w33-run-30) and during an ECC operation and a DMA in [`finale`](14-evidence.md#142130-finale-run-34); not raised in [`op09nand`](14-evidence.md#142116-op09nand-run-29), [`evsweep2`](14-evidence.md#142137-evsweep2-run-35), [`w2state`](14-evidence.md#142151-w2state-run-36) or [`w2vic`](14-evidence.md#142171-w2vic-run-38) (a source outside the FMSS engine) | device |
 | 43 | VIC1 line 11, the ECC engine's line | while an `ECC_DONE` flag is pending and enabled in `0x844` (bit 0) | device |
 
-All other numbers never passed in any state tried, also while a chip erased, programmed or read, during ECC operations and DMAs, and with the second register set's flags pending ([D-w2state-36](14-evidence.md#142151-w2state-run-36), [D-evsweep2-35](14-evidence.md#142137-evsweep2-run-35)).
+All other numbers never passed in any state tried, also while a chip erased, programmed or read, during ECC operations and DMAs, and with the second register set's flags pending ([`w2state`](14-evidence.md#142151-w2state-run-36), [`evsweep2`](14-evidence.md#142137-evsweep2-run-35)).
 
-So `wait2` condition 5 is unrelated to `wait` event 5 (the status latch), despite the same number. Lines 5 and 33 belong to devices outside the FMSS engine, which explains why `wait2` condition 33 was true in some runs and not in others. Which devices raise lines 5 and 33 is not determined here.
+So `wait2` condition 5 is unrelated to `wait` event 5 (the status latch), despite the same number. Lines 5 and 33 belong to devices outside the FMSS engine. This explains why `wait2` condition 33 passed while the chip was idle in [`op09w33`](14-evidence.md#142123-op09w33-run-30) and during an ECC operation and a DMA in [`finale`](14-evidence.md#142130-finale-run-34); it did not pass in [`op09nand`](14-evidence.md#142116-op09nand-run-29) (idle and during an erase), [`evsweep2`](14-evidence.md#142137-evsweep2-run-35), [`ctrlwords`](14-evidence.md#142139-ctrlwords-run-35), [`w2state`](14-evidence.md#142151-w2state-run-36), [`blk100b`](14-evidence.md#142168-blk100b-run-37) or [`w2vic`](14-evidence.md#142171-w2vic-run-38). Which devices raise lines 5 and 33 is not determined here.
 
 ## 7.3 tmwait and evjmp
 
@@ -101,9 +101,9 @@ The descriptions of both opcodes are in [chapter 6, opcode `15`](06-opcode-refer
 
 `FMSS_C14` (`0xc14`) is the timeout timer, an 8-bit down-counter ([chapter 8, section 8.1.6](08-sequencer-control-registers.md#816-fmss_c14-0xc14-the-timeout-timer)). The timeout lasts (start-word bits 15:8) + 1 steps, and the length of one step is set by start-word bits 7:4 ([chapter 8, section 8.1.1](08-sequencer-control-registers.md#811-start-word-and-timeout-fmss_ctrl-device)). Device behaviour:
 
-- A `wait` that has to wait loads the start word's bits 15:8 (`0xff` with `0xfff5`) and counts down (`0xf6` was read in the middle of a wait). With one of bits 8..15 cleared in the start word, `C14` read `0xfe`, `0xfd`, `0xfb`, `0xf7`, `0xef`, `0xdf`, `0xbf`, `0x7f` after a run with waits ([D-startbits-35](14-evidence.md#142132-startbits-run-35)).
+- A `wait` that has to wait loads the start word's bits 15:8 (`0xff` with `0xfff5`) and counts down (`0xf6` was read in the middle of a wait). With one of bits 8..15 cleared in the start word, `C14` read `0xfe`, `0xfd`, `0xfb`, `0xf7`, `0xef`, `0xdf`, `0xbf`, `0x7f` after a run with waits ([`startbits`](14-evidence.md#142132-startbits-run-35)).
 - After a timeout the timer reads its reload value; the end of a program freezes it; CPU and program writes do not change it.
-- Opcode `15` waits for it: from a non-zero value it reloads and waits until 0 (about 4.85 ms, leaving 0); from 0 it reloads at once. Two `tmwait` in one program made the whole program run 4841, 18 and 3250 us in three runs ([D-ctrlwords-35](14-evidence.md#142139-ctrlwords-run-35); not explained).
+- Opcode `15` waits for it: from a non-zero value it reloads and waits until 0 (about 4.85 ms, leaving 0); from 0 it reloads at once. Two `tmwait` in one program made the whole program run 4841, 18 and 3250 us in three runs with different values written to `C10`, `C48` and `C54` before it ([`ctrlwords`](14-evidence.md#142139-ctrlwords-run-35); not explained).
 - The write of `0xff` that the erase program makes after a timeout therefore has no visible effect.
 
 Findings 48 and 51 ([chapter 18](18-ledger.md)). The device rows "timer `C14`" and "`C08`" are in [chapter 16, section 16.2](16-device-findings.md#162-settled-on-a-device).

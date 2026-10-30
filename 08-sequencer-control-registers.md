@@ -37,7 +37,7 @@ The original firmware writes these two start words:
 
 The 4G/5G bootloader starts a program with `0xffb5`. This differs from `0xfff5` only in bit 6. The bootloader also polls for the end of the program instead of taking the interrupt.
 
-What bit 6 does is open. No effect of bit 6 has been found in any program tried. These programs included program fetch from SDRAM and SRAM, 2000 `ldi` / `sti` / `pld`, `sig`, a DMA with an ECC encode, a vectored fault, and reads and writes of the reserved window words ([D-startbits-35](14-evidence.md#142132-startbits-run-35), [D-startdiff-35](14-evidence.md#142131-startdiff-run-35)). The reading "bit 6 = interrupt enable" is not confirmed.
+What bit 6 does is open. No effect of bit 6 has been found in any program tried. These programs included program fetch from SDRAM and SRAM, 2000 `ldi` / `sti` / `pld`, `sig`, a DMA with an ECC encode, a vectored fault, and reads and writes of the reserved window words ([`startbits`](14-evidence.md#142132-startbits-run-35), [`startdiff`](14-evidence.md#142131-startdiff-run-35)). The reading "bit 6 = interrupt enable" is not confirmed.
 
 | bit | effect when written | read back |
 |---|---|---|
@@ -48,9 +48,9 @@ What bit 6 does is open. No effect of bit 6 has been found in any program tried.
 | 7:4 | timeout step size n ([chapter 7, section 7.5](07-events-and-waits.md#75-timeout-length)). With n = 0 the timeout comes at once (0 to 2 us, and `C14` then reads `0xfe`). What bit 6 does is open ([chapter 17](17-open-questions.md#171-instruction-set-and-sequencer-behaviour), item 8) | as written |
 | 15:8 | timeout length in steps, minus 1 | as written |
 | 16 | hold, same as bit 3 | 0 |
-| 17 | no effect seen ([D-startbits-35](14-evidence.md#142132-startbits-run-35)) | 0 |
+| 17 | no effect seen ([`startbits`](14-evidence.md#142132-startbits-run-35)) | 0 |
 | 18 | not taken from a write | set while a started program has not finished (held, paused or blocked) |
-| 19 to 31 | no effect seen in the same set of programs ([D-startbits-35](14-evidence.md#142132-startbits-run-35)) | 0 |
+| 19 to 31 | no effect seen in the same set of programs ([`startbits`](14-evidence.md#142132-startbits-run-35)) | 0 |
 
 - Bits 15:4 written alone (together with bit 0, without bit 2) changed nothing in a loop, a `wait`, an illegal opcode, `evjmp` or the interrupt line.
 - `0xfff5` and `0xffb5` gave the same timeout length, the same CPU interrupt line and the same behaviour in every test tried.
@@ -72,7 +72,7 @@ A state code of the sequencer (device; the CPU read it while a program was in ea
 | 1 | running |
 | 3 | paused by start-word bit 1 |
 | 4 | waiting for a `wait` event, or stalled on an illegal opcode (one state: the timer `C14` counts down in both) |
-| 5 | the value that a program reads from `CS_STATUS` itself (with `ld` or `pld`) while it runs. It was 5 in every place tried: right after starting a DMA, an ECC operation or a chip command, after `sig`, and inside a fault handler ([D-c08self-35](14-evidence.md#142140-c08self-run-35)). The CPU reads 1 in the same state |
+| 5 | the value that a program reads from `CS_STATUS` itself (with `ld` or `pld`) while it runs. It was 5 in every place tried: right after starting a DMA, an ECC operation or a chip command, after `sig`, and inside a fault handler ([`c08self`](14-evidence.md#142140-c08self-run-35)). The CPU reads 1 in the same state |
 | `0xa` | stopped at `pause` (opcode `12`) |
 
 - CPU writes are ignored. The reset clears it.
@@ -88,7 +88,7 @@ Flags, cleared by writing 1 to the bit (write-1-to-clear).
 | 1 | the program executed `sig` (opcode `10`) |
 | 2 | a fault (a timeout or an illegal opcode) |
 | 3 | the program is stopped at `pause` (opcode `12`); the 4G/5G CPU driver calls this bit "pause" |
-| 4 | an interrupt source of the NAND controller (FMC) that is enabled in its word `0x044`. A program with a command, an address, a data read, a status latch and a DMA was run. In it, bits 0, 1, 2, 11 and 12 of `0x044` each raised `CS_IRQ` bit 4, and the other 27 bits did not (three of three runs, [D-irq044-35](14-evidence.md#142142-irq044-run-35)). Which operation each of those bits belongs to is not identified |
+| 4 | an interrupt source of the NAND controller (FMC) that is enabled in its word `0x044`. A program with a command, an address, a data read, a status latch and a DMA was run. In it, bits 0, 1, 2, 11 and 12 of `0x044` each raised `CS_IRQ` bit 4, and the other 27 bits did not (three of three runs, [`irq044`](14-evidence.md#142142-irq044-run-35)). Which operation each of those bits belongs to is not identified |
 | 5 | bit 2 of the NAND controller words `0x054` to `0x05c` |
 | 6 | an `ECC_DONE` bit that is enabled in ECC word `0x844` |
 
@@ -97,14 +97,14 @@ Flags, cleared by writing 1 to the bit (write-1-to-clear).
 
 ### 8.1.5 `FMSS_C10` (`0xc10`)
 
-The program prologue writes 1 to it (interpreted as "enable", inferred). The register holds eight bits. No value written to it had a visible effect on a run, the timeout, a `wait`, a DMA or an ECC encode (device, [D-ctrlwords-35](14-evidence.md#142139-ctrlwords-run-35)).
+The program prologue writes 1 to it (interpreted as "enable", inferred). The register holds eight bits. No value written to it had a visible effect on a run, the timeout, a `wait`, a DMA or an ECC encode (device, [`ctrlwords`](14-evidence.md#142139-ctrlwords-run-35)).
 
 ### 8.1.6 `FMSS_C14` (`0xc14`): the timeout timer
 
 An 8-bit down-counter (device). The timeout lasts (start-word bits 15:8) + 1 steps, and the length of one step is set by start-word bits 7:4 ([chapter 8, section 8.1.1](#811-start-word-and-timeout-fmss_ctrl-device)).
 
 - A `wait` that has to wait loads the start word's bits 15:8 into the counter (`0xff` with `0xfff5`) and counts down; `0xf6` was read in the middle of a wait.
-- With one of bits 8..15 cleared in the start word, the counter read `0xfe`, `0xfd`, `0xfb`, `0xf7`, `0xef`, `0xdf`, `0xbf` or `0x7f` (one value per cleared bit) after a run ([D-startbits-35](14-evidence.md#142132-startbits-run-35)).
+- With one of bits 8..15 cleared in the start word, the counter read `0xfe`, `0xfd`, `0xfb`, `0xf7`, `0xef`, `0xdf`, `0xbf` or `0x7f` (one value per cleared bit) after a run ([`startbits`](14-evidence.md#142132-startbits-run-35)).
 - After a timeout it reads its reload value. The end of a program freezes it at its current value.
 - Writes by the CPU or the program do not change it.
 - `tmwait` (opcode `15`) waits for it: from a non-zero value it reloads and waits until 0 (about 4.85 ms, leaving 0); from 0 it reloads at once ([chapter 6, opcode `15`](06-opcode-reference.md#15-tmwait)).
@@ -129,7 +129,7 @@ The byte offset of the current instruction while a program runs or is stopped; 0
 The original fault handlers read this register.
 
 - It reads 0 after every run, whatever the CPU wrote (device).
-- Inside a fault handler it holds the offset of the faulting instruction + 8 (device). Faults at `0x28`, `0x40` and `0x70` gave `0x30`, `0x48` and `0x78`. A second fault inside the handler gave the offset of the faulting instruction in the handler + 8 ([D-ctrlwords-35](14-evidence.md#142139-ctrlwords-run-35), [D-c50fault-35](14-evidence.md#142138-c50fault-run-35)).
+- Inside a fault handler it holds the offset of the faulting instruction + 8 (device). Faults at `0x28`, `0x40` and `0x70` gave `0x30`, `0x48` and `0x78`. A second fault inside the handler gave the offset of the faulting instruction in the handler + 8 ([`ctrlwords`](14-evidence.md#142139-ctrlwords-run-35), [`c50fault`](14-evidence.md#142138-c50fault-run-35)).
 
 ### 8.1.10 `0xc40` and `0xc44`: the held instruction
 
@@ -147,7 +147,7 @@ CPU writes are ignored. The reset clears both.
 
 - A program start clears it, so the program never sees a value that the CPU wrote.
 - A value written by the program stays after the end of the program.
-- No effect was found on a run, the timeout, a wait, a DMA or an ECC encode (device, [D-ctrlwords-35](14-evidence.md#142139-ctrlwords-run-35)).
+- No effect was found on a run, the timeout, a wait, a DMA or an ECC encode (device, [`ctrlwords`](14-evidence.md#142139-ctrlwords-run-35)).
 
 ### 8.1.12 `FMSS_C4C` (`0xc4c`): the fault vector
 
@@ -155,7 +155,7 @@ The byte offset of the fault handler in the program, written by the program prol
 
 ### 8.1.13 `FMSS_C50` (`0xc50`): pending events
 
-Bits 0 to 6 show which of `wait` events 0 to 6 are pending (device; bits 0..5 were each seen with only that flag pending, bit 6 after a command sent through the second register set, [D-c50b8-36](14-evidence.md#142152-c50b8-run-36)):
+Bits 0 to 6 show which of `wait` events 0 to 6 are pending (device; bits 0..5 were each seen with only that flag pending, bit 6 after a command sent through the second register set, [`c50b8`](14-evidence.md#142152-c50b8-run-36)):
 
 | bit | `wait` event |
 |---|---|
@@ -168,8 +168,8 @@ Bits 0 to 6 show which of `wait` events 0 to 6 are pending (device; bits 0..5 we
 | 6 | event 6, command sent by the second register set |
 
 - Each bit follows its flag and clears when that flag is acknowledged.
-- The original fault handlers test bit 0 and write 1 to it. Bit 0 is set while a command flag is pending and clear otherwise. A timeout or an illegal opcode does not change it, and the handler's write of 1 does not clear it (device, [D-c50fault-35](14-evidence.md#142138-c50fault-run-35)).
-- The value at power-on is `0xffff1800`. Bit 8 was seen set once after a soft reset (`0xffff1900`). In runs 35 and 36 it stayed clear, in 17 reads around soft resets, a sequencer reset, a fault, a second-set command, an ECC decode and ten `end`-only runs ([D-c50b8-36](14-evidence.md#142152-c50b8-run-36)). Its meaning is open.
+- The original fault handlers test bit 0 and write 1 to it. Bit 0 is set while a command flag is pending and clear otherwise. A timeout or an illegal opcode does not change it, and the handler's write of 1 does not clear it (device, [`c50fault`](14-evidence.md#142138-c50fault-run-35)).
+- The value at power-on is `0xffff1800`. Bit 8 was seen set once after a soft reset (`0xffff1900`). It stayed clear in [`c50fault`](14-evidence.md#142138-c50fault-run-35) and in `c50b8`, which read it 17 times around soft resets, a sequencer reset, a fault, a second-set command, an ECC decode and ten `end`-only runs ([`c50b8`](14-evidence.md#142152-c50b8-run-36)). Its meaning is open.
 
 ### 8.1.14 `0xc54`
 
@@ -185,7 +185,7 @@ The register holds eight bits (writing `0xffff` reads back `0xff`, writing `0x10
 | bit | effect (device) |
 |---|---|
 | 0 | at an `end`: sets `C5C`, and every later `end` then runs the fault vector once, until the CPU rewrites `C58`, `C4C` or `C5C`. At a fault: sets `C5C` |
-| 1 | with bit 1 alone (`C58` = 2) no `end` ran the fault vector in three runs in a row, whether the CPU wrote `C4C` before or after `C58` or the program wrote it (run 36, with the job's clean-up switched off, [D-c58b2-36](14-evidence.md#142155-c58b2-run-36); run 35). With bits 1 and 2 (`C58` = 6) the first `end` after the CPU wrote `C58` and `C4C` ran the fault vector once, and the next two runs, with `C58` still 6, did not (runs 35 and 36). In run 8, `C58` = 2 with `C4C` written by the program diverted one `end`. The condition is open |
+| 1 | with bit 1 alone (`C58` = 2) no `end` ran the fault vector in three programs in a row, whether the CPU wrote `C4C` before or after `C58` or the program wrote it (in `c58b2`, with the clean-up of the device job switched off so that `C58` kept its value over three programs, [`c58b2`](14-evidence.md#142155-c58b2-run-36); also in `c58b1`, [`c58b1`](14-evidence.md#142136-c58b1-run-35)). With bits 1 and 2 (`C58` = 6) the first `end` after the CPU wrote `C58` and `C4C` ran the fault vector once, and the next two programs, with `C58` still 6, did not (`c58b2` and `c58b1`). In [`oneshot`](14-evidence.md#14236-oneshot-run-8), `C58` = 2 with `C4C` written by the program diverted one `end`. The condition is open |
 | 2 | a timeout or an illegal-opcode fault continues at the fault vector (with the bit clear, it continues at the next instruction), and sets `C5C` |
 | 3 to 7 | no visible effect |
 

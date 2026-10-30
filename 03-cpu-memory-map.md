@@ -33,7 +33,7 @@ The CPU sees the same words at `0x38a00000 + offset`. Below `0xc00`, offset bit 
 | `0xd00..0xd7c` | parameter RAM, 32 words shared by the CPU and the program ([chapter 4, section 4.4](04-sequencer-memory-map.md#44-parameter-ram)) | RAM |
 | `0xd80..0xdfc`, `0xe00..0xffc` | nothing: reads 0, writes are lost | empty |
 
-Who can read and write what (device, [D-access-27](14-evidence.md#142105-access-run-27)): every word was written with all ones and with zero, once from the CPU and once from the sequencer. Almost every register behaves the same for both. The differences are:
+Who can read and write what (device, [`access`](14-evidence.md#142105-access-run-27)): every word was written with all ones and with zero, once from the CPU and once from the sequencer. Almost every register behaves the same for both. The differences are:
 
 - The PC (`0xc38`): the sequencer can write it (a jump); the CPU can write it only while a program is stopped at `pause`.
 - `C3C` (`0xc3c`), `C48` (`0xc48`) and `C54` (`0xc54`): a value written by the CPU before a start is not what the program reads, because the start clears these registers. A value that the program writes to `C48` or `C54` stays visible to the CPU after the run. `C3C` is cleared at the end of the run.
@@ -70,7 +70,7 @@ The original CPU driver polls the VIC1 raw status bit 22 (source 54) for the end
 
 Device results (row "interrupt line" of [chapter 16, section 16.2](16-device-findings.md#162-settled-on-a-device)):
 
-- **`0x044` bit per source** (device run 37, one operation per run with its flag left pending, [D-irqop-37](14-evidence.md#142170-irqop-run-37)):
+- **`0x044` bit per source** (device, one operation per program with its flag left pending, [`irqop`, device run 37](14-evidence.md#142170-irqop-run-37)):
 
   | `0x044` bit | source (`FMC_STATUS` flag) | `CS_IRQ` bit 4 | VIC0 line 20 |
   |---|---|---|---|
@@ -80,7 +80,7 @@ Device results (row "interrupt line" of [chapter 16, section 16.2](16-device-fin
   | 11 | DMA done (bit 20) | set | set |
   | 12 | status latched (bit 23) | set | set |
 
-  Each bit routes exactly one flag; with no bit set nothing was raised. All NAND controller sources share VIC0 line 20 (interrupt source 20). The ECC engine's sources, enabled in `0x844`, raise VIC1 line 11 (interrupt source 43): with `0x844` bit 0 set and an `ECC_DONE` flag pending, the raw status showed line 43 and no other new line ([D-w2vic-38](14-evidence.md#142171-w2vic-run-38)). In the status-latch program the `70h` command flag, acknowledged before the latch, still left `CS_IRQ` bit 4 set with `0x044` bit 0, while VIC0 line 20 stayed clear: `CS_IRQ` bit 4 keeps a routed flag after the flag is acknowledged, and VIC0 line 20 follows a routed flag only while it is pending (inferred from this run).
+  Each bit routes exactly one flag; with no bit set nothing was raised. All NAND controller sources share VIC0 line 20 (interrupt source 20). The ECC engine's sources, enabled in `0x844`, raise VIC1 line 11 (interrupt source 43): with `0x844` bit 0 set and an `ECC_DONE` flag pending, the raw status showed line 43 and no other new line ([`w2vic`](14-evidence.md#142171-w2vic-run-38)). In the status-latch program the `70h` command flag, acknowledged before the latch, still left `CS_IRQ` bit 4 set with `0x044` bit 0, while VIC0 line 20 stayed clear: `CS_IRQ` bit 4 keeps a routed flag after the flag is acknowledged, and VIC0 line 20 follows a routed flag only while it is pending (inferred from this program).
 
 - After a power cycle and after a soft reset alike, VIC1 raw bit 22 stayed clear for an END, a fault, opcode `10` and a `12` stop, with and without bit 6 in the start word.
 - With every VIC0 and VIC1 raw line recorded, no line followed END, faults or start-word bits.
@@ -100,10 +100,10 @@ Device results (row "interrupt line" of [chapter 16, section 16.2](16-device-fin
   - VIC0 line 20 appeared with a command and `0x044` bit 0, and with address cycles and bit 1.
   - It did not appear with a command and bit 1 or 2, with an address and bit 0, with a status latch and bit 0 or 13, or with a DMA and bit 11.
   - `CS_IRQ` bit 4 was set for a command with bit 0, an address with bit 1, a status latch with bit 0 and a DMA with bit 11.
-- In the [`irqsrc`](14-evidence.md#142101-irqsrc-run-27) runs, line 20 appeared with a command and bit 0 and with a status latch and bit 13, in place of an address and bit 1. The `CS_IRQ` bit 4 results also differed for an address with bit 0 and a status latch with bit 13. Line 20 is therefore not the same as `CS_IRQ` bit 4.
+- In the [`irqsrc`](14-evidence.md#142101-irqsrc-run-27) tests, line 20 appeared with a command and bit 0 and with a status latch and bit 13, in place of an address and bit 1. The `CS_IRQ` bit 4 results also differed for an address with bit 0 and a status latch with bit 13. Line 20 is therefore not the same as `CS_IRQ` bit 4.
 
-- Run 35, each case three times after a soft reset ([`vic20`](14-evidence.md#142134-vic20-run-35), [`irq044`](14-evidence.md#142142-irq044-run-35)):
-  - VIC0 line 20 appeared with a command and `0x044` bit 0 and with an address and bit 1, the same in all three runs. It did not appear with a status latch (bit 0 or 13) or a DMA (bit 11).
+- Each case three times after a soft reset ([`vic20`](14-evidence.md#142134-vic20-run-35), [`irq044`](14-evidence.md#142142-irq044-run-35)):
+  - VIC0 line 20 appeared with a command and `0x044` bit 0 and with an address and bit 1, the same in all three repetitions of each case. It did not appear with a status latch (bit 0 or 13) or a DMA (bit 11).
   - In a program with a command, an address, a data read, a status latch and a DMA, with the flags acknowledged, `0x044` bits 0, 1, 2, 11 and 12 each set `CS_IRQ` bit 4. None of them raised VIC0 line 20.
   - VIC1 line 22 was never seen.
 

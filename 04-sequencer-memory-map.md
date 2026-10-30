@@ -9,7 +9,7 @@ Field widths (device):
 - The register field `R` is decoded in all 8 bits: register numbers 24 and 26 are not treated as 8 and 10 ([chapter 4, section 4.3](#43-register-file-r0r7-the-pc-and-register-numbers-above-7)).
 - Window offsets are 12 bits. `wr`, `st` and `ld` with `arg` = `0x1d70`, `0x8d70` or `0xfd70` all reached the word at `0xd70`, so bits 15:12 of `arg` are ignored. `pld` and `pst` wrap their register value at 12 bits in the same way.
 - Branch targets and values written to r8 use more bits than window offsets.
-  - A branch target is a byte offset from the program start. A target with bit 12, 16 or 24 set did not reach the label it was built from: the bit is not cut off, so the offset points beyond the program. With bit 12 or 16 the run then ended without reaching the label; with bit 24 the sequencer fetched from an address that held no valid instruction and timed out ([D-fwidth-27](14-evidence.md#142100-fwidth-run-27)).
+  - A branch target is a byte offset from the program start. A target with bit 12, 16 or 24 set did not reach the label it was built from: the bit is not cut off, so the offset points beyond the program. With bit 12 or 16 the run then ended without reaching the label; with bit 24 the sequencer fetched from an address that held no valid instruction and timed out ([`fwidth`](14-evidence.md#142100-fwidth-run-27)).
   - A target with bit 31 set reached the label, so bit 31 is ignored.
 - `jr` with any of bits 12, 16, 24 and 31 set in the register did not jump at all; execution continued with the next instruction.
 
@@ -31,7 +31,7 @@ Register file and PC (rows of the control-block table; the primary description i
 | `0xc18..0xc34` | r0..r7 | the registers; r6 is `SEQ_RESULT`. A value that the CPU writes before the start becomes the register's starting value; a start leaves the registers unchanged; the sequencer reset clears them (device) |
 | `0xc38` | `FMSS_PC` | byte offset of the current instruction while a program runs or waits; 0 after the end. It is register r8 (`0xc18 + 4 * 8`). The program reads it as r8 or with `ld`. Writing it (`movi r8`, `wr` or `st` to `[0xc38]`) is a jump. The CPU can write it only while the program is stopped at `pause` ([chapter 6, opcode `12`](06-opcode-reference.md#12-pause)); otherwise CPU writes are ignored (device) |
 
-Register numbers (device, every number from 8 to 255 in every role, [D-regsweep-35](14-evidence.md#142149-regsweep-run-35); further samples [D-regnum-15](14-evidence.md#14259-regnum-run-15)): the register fields hold 8 bits and are decoded in full. Before testing each role, the program loaded distinct values into r0..r7 and into the writable control words `C10`, `C48`, `C54` and `C3C`. This made it possible to tell apart three outcomes: the operand reads r0, the operand reads 0, and the operand reads the control word at `0xc18 + 4 × N`.
+Register numbers (device, every number from 8 to 255 in every role, [`regsweep`](14-evidence.md#142149-regsweep-run-35); further samples [`regnum`](14-evidence.md#14259-regnum-run-15)): the register fields hold 8 bits and are decoded in full. Before testing each role, the program loaded distinct values into r0..r7 and into the writable control words `C10`, `C48`, `C54` and `C3C`. This made it possible to tell apart three outcomes: the operand reads r0, the operand reads 0, and the operand reads the control word at `0xc18 + 4 × N`.
 
 | role | 8 | 10 | 9 and 11..255 |
 |---|---|---|---|
@@ -44,13 +44,13 @@ Register numbers (device, every number from 8 to 255 in every role, [D-regsweep-
 | address register of `ldi` | reads a code-like word (`e90d1c00`) | r0 | r0 |
 | address register of `pld` | reads 0 | r0 | r0 |
 
-- `st [REG], rN` with N from 8 to 255 does not store the value of a fixed register. It stores the last value that passed through the register file: the value the instruction before it wrote into a register, or, if that instruction wrote no register, the register value it read (device, [D-stprev-36](14-evidence.md#142156-stprev-run-36); also device runs 15 and 35). With N = 9, 14 and 200 alike, after:
+- `st [REG], rN` with N from 8 to 255 does not store the value of a fixed register. It stores the last value that passed through the register file: the value the instruction before it wrote into a register, or, if that instruction wrote no register, the register value it read (device, [`stprev`](14-evidence.md#142156-stprev-run-36); also [`regnum`](14-evidence.md#14259-regnum-run-15) and [`regsweep`](14-evidence.md#142149-regsweep-run-35)). With N = 9, 14 and 200 alike, after:
   - `movi r0` / `r3` / `r7`, `add r2, r2, #1`, `mov r4, r1`, `ld r5, [...]`, `pld r6, [r0]`, `ldi r1, [r0]`: the value written to that register;
   - `st [0xd7c], r5`: r5's value (the register `st` read);
   - `wr [0xd7c], #...` and `nop`: r0's value (instructions whose register field is 0);
   - `wait 11`: the value of the instruction before the `wait` (`wait` leaves it unchanged).
 - None of the numbers reads or writes a control word: the values preloaded into `C10`, `C48`, `C54` and `C3C` never appeared.
-- r8 is the PC: `movi r8, #label` and `mov r8, r1` jump to the label, `mov r1, r8` returns the offset of that instruction ([D-r8-16](14-evidence.md#14273-r8-run-16), [D-r8-17](14-evidence.md#14279-r8-run-17)).
+- r8 is the PC: `movi r8, #label` and `mov r8, r1` jump to the label, `mov r1, r8` returns the offset of that instruction ([`r8`, device run 16](14-evidence.md#14273-r8-run-16), [`r8`, device run 17](14-evidence.md#14279-r8-run-17)).
 
 No original program uses any register number above 7.
 

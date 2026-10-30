@@ -65,7 +65,7 @@ The chip is left in status-output mode. The original programs use one `wait` eve
 
 The third-party driver does not rely on `wait` event 5. It polls `FMC_NSTAT` repeatedly, up to 10 000 reads per latch and up to 200 ms (3p). How `wait` event 5 is armed and consumed is described in [chapter 7, section 7.1](07-events-and-waits.md#71-wait-events).
 
-The ready wait after a page read or program takes 25 us to 2 ms. A block erase takes about 1.1 ms for a block holding data (device, [D-eraseseq-29](14-evidence.md#142117-eraseseq-run-29)), the longest wait. In the device checks of the write sequence, the poll ran with `FMC_DATA_SEL` = 1 and latched the status byte repeatedly without `wait` events ([D-writeseq2-31](14-evidence.md#142125-writeseq2-run-31)).
+The ready wait after a page read or program takes 25 us to 2 ms. A block erase takes about 1.1 ms for a block holding data (device, [`eraseseq`](14-evidence.md#142117-eraseseq-run-29)), the longest wait. In the device checks of the write sequence, the poll ran with `FMC_DATA_SEL` = 1 and latched the status byte repeatedly without `wait` events ([`writeseq2`](14-evidence.md#142125-writeseq2-run-31)).
 
 ### 11.1.8 C8: Data transfer
 
@@ -100,7 +100,7 @@ Two data transfers overlap in time only inside a single `FMCTRL1` code that name
 
 ### 11.1.13 C13: Prime after a reset (CPU side)
 
-After `FMSS_CTRL = 0x30000`, the sequencer executes instruction 0 of the first started program only if that instruction is `end` ([D-startseq3-8](14-evidence.md#14235-startseq3-run-8)). The original CPU driver follows its reset immediately with a start of an idle program of zero bytes ([RE-33](14-evidence.md#14333-re-33-cpu-driver-reset)). The registers `C58`, `C4C` and `C5C` keep their values across the reset. If a previous program left `C58` bit 0 set, every later END runs the fault handler once (device, [D-pending-5](14-evidence.md#14226-pending-run-5), [D-pending-6](14-evidence.md#14230-pending-run-6)).
+After `FMSS_CTRL = 0x30000`, the sequencer executes instruction 0 of the first started program only if that instruction is `end` ([`startseq3`](14-evidence.md#14235-startseq3-run-8)). The original CPU driver follows its reset immediately with a start of an idle program of zero bytes ([RE-33](14-evidence.md#14333-re-33-cpu-driver-reset)). The registers `C58`, `C4C` and `C5C` keep their values across the reset. If a previous program left `C58` bit 0 set, every later END runs the fault handler once (device, [`pending`, device run 5](14-evidence.md#14226-pending-run-5), [`pending`, device run 6](14-evidence.md#14230-pending-run-6)).
 
 ### 11.1.14 How a chip and a page are selected
 
@@ -130,7 +130,7 @@ This section collects how a run chooses the NAND chip and the page it accesses. 
 - The address cycles follow the table of [C6](#1116-c6-address-cycles). `FMC_ANUM` is the number of cycles minus 1. A page read or program sends 5 cycles: column 0 in two bytes, then the row in three bytes, with `FMC_ADDR0` = `row << 16` and `FMC_ADDR1` = `row >> 16`. Erase and the `78h` status send 3 row cycles with `FMC_ADDR0` = row. READ ID sends one cycle with address 0.
 - The program then writes `FMCTRL1` = 1, waits for `wait` event 1 and acknowledges `FMC_STATUS` = `0x4`.
 - The controller sends the bytes of `FMC_ADDR0` from the least significant byte upward, then the byte of `FMC_ADDR1` (inferred from the formats that work on the device).
-- An erase sent with a fourth address cycle (`FMC_ANUM` = 3) still erased the block: the chip ignores the extra cycle (device, [D-pageorder-30](14-evidence.md#142122-pageorder-run-30)).
+- An erase sent with a fourth address cycle (`FMC_ANUM` = 3) still erased the block: the chip ignores the extra cycle (device, [`pageorder`](14-evidence.md#142122-pageorder-run-30)).
 
 **Within the page.** The column starts at 0, and the page is read or written as one stream in order: for each sector its 16-byte chunk, then its 512 data bytes ([R1](#1121-r1-page-stream), [chapter 10, section 10.9](10-ecc-engine.md#109-what-is-stored-on-the-chip)). The programs do not send a new column between sectors.
 
@@ -138,7 +138,7 @@ This section collects how a run chooses the NAND chip and the page it accesses. 
 
 ### 11.1.15 Worked example: chip CE1, block 3000, page 5
 
-One page, followed through a read, an erase of its block and a write, with every register write and the bytes that go over the NAND bus. The sequences are the ones the device experiments used on the unit tested ([D-rawpage-29](14-evidence.md#142113-rawpage-run-29), [D-rawwrite-29](14-evidence.md#142114-rawwrite-run-29), [D-eraseseq-29](14-evidence.md#142117-eraseseq-run-29), [D-writeseq2-31](14-evidence.md#142125-writeseq2-run-31)).
+One page, followed through a read, an erase of its block and a write, with every register write and the bytes that go over the NAND bus. The sequences are the ones the device experiments used on the unit tested ([`rawpage`](14-evidence.md#142113-rawpage-run-29), [`rawwrite`](14-evidence.md#142114-rawwrite-run-29), [`eraseseq`](14-evidence.md#142117-eraseseq-run-29), [`writeseq2`](14-evidence.md#142125-writeseq2-run-31)).
 
 **Choosing the chip and the page.**
 
@@ -306,7 +306,7 @@ READ changes the CE selection only between pages, after the last NAND read of th
 
 READ tests bit 27 once per page, after the last data read of the page has completed. It then acknowledges the bit (writes `0x8000000`) so that the next page starts clear ([RE-18](14-evidence.md#14318-re-18-page-word-and-fmc_status-b27)).
 
-Device: bit 27 was set after reading every written sector (valid code words, sectors with stored errors, and a written sector whose chunk is all `0xff`) and clear after reading every erased sector (all `0xff`). `FMC_STATUS` read `0x0803c000` after a written sector and `0x0003c000` after an erased one ([D-rawpage-29](14-evidence.md#142113-rawpage-run-29), [D-rawwrite-29](14-evidence.md#142114-rawwrite-run-29)).
+Device: bit 27 was set after reading every written sector (valid code words, sectors with stored errors, and a written sector whose chunk is all `0xff`) and clear after reading every erased sector (all `0xff`). `FMC_STATUS` read `0x0803c000` after a written sector and `0x0003c000` after an erased one ([`rawpage`](14-evidence.md#142113-rawpage-run-29), [`rawwrite`](14-evidence.md#142114-rawwrite-run-29)).
 
 ### 11.4.8 RD8: Page result
 
@@ -319,7 +319,7 @@ This is the exact behaviour of the original firmware: the test is made before th
 
 ### 11.4.9 RD9: Meta
 
-After the last sector of the page (the last unit) has been decoded, READ writes `FMC_METACFG` ([R6](#1126-r6-meta-layout-word)) and `FMC_METACTL` = 2, polls until bit 1 reads 0, and copies `FMC_META0..2` into `meta[3 * i .. 3 * i + 2]`. The original performs one meta decode per page, using the slots of the last unit ([RE-16](14-evidence.md#14316-re-16-meta-engine-use)). On the chip, both units of a 4 KiB page carry the same 12 metadata bytes: in all 42 pages written by the original firmware that were read whole (pages 0, 1 and 64 of 7 blocks on CE0 and CE1), the 3 metadata bytes of each chunk of the second unit equalled those of the first (device, [D-fullpage-37](14-evidence.md#142163-fullpage-run-37); [WR3](#1153-wr3-meta-encode)).
+After the last sector of the page (the last unit) has been decoded, READ writes `FMC_METACFG` ([R6](#1126-r6-meta-layout-word)) and `FMC_METACTL` = 2, polls until bit 1 reads 0, and copies `FMC_META0..2` into `meta[3 * i .. 3 * i + 2]`. The original performs one meta decode per page, using the slots of the last unit ([RE-16](14-evidence.md#14316-re-16-meta-engine-use)). On the chip, both units of a 4 KiB page carry the same 12 metadata bytes: in all 42 pages written by the original firmware that were read whole (pages 0, 1 and 64 of 7 blocks on CE0 and CE1), the 3 metadata bytes of each chunk of the second unit equalled those of the first (device, [`fullpage`](14-evidence.md#142163-fullpage-run-37); [WR3](#1153-wr3-meta-encode)).
 
 ### 11.4.10 RD10: Erased and uncorrectable pages
 
@@ -399,13 +399,13 @@ These forms are used for chip modes 2, 3, 4, 9, 12, 13 and are not exercised by 
 
 ### 11.5.10 Device checks of the write sequence
 
-The checks used scratch blocks. Every page was read back raw and compared byte for byte (data, metadata and parity) ([D-writeseq-29](14-evidence.md#142115-writeseq-run-29), [D-writeseq2-31](14-evidence.md#142125-writeseq2-run-31), [D-pageorder-30](14-evidence.md#142122-pageorder-run-30), [D-eraseseq-29](14-evidence.md#142117-eraseseq-run-29)):
+The checks used scratch blocks. Every page was read back raw and compared byte for byte (data, metadata and parity) ([`writeseq`](14-evidence.md#142115-writeseq-run-29), [`writeseq2`](14-evidence.md#142125-writeseq2-run-31), [`pageorder`](14-evidence.md#142122-pageorder-run-30), [`eraseseq`](14-evidence.md#142117-eraseseq-run-29)):
 
 - One page per run, [WR3](#1153-wr3-meta-encode) + [WR4](#1154-wr4-sector-order) with `0xe4` for the data: correct on CE0 and on CE1, also both CEs programmed back to back in one run (`80h` .. `10h` on CE0, then on CE1, then a status poll of each).
 - Two-plane pair (`80h` .. `11h`, status poll, `81h` .. `10h`, blocks B and B+1): both pages correct, about 470 us.
 - Several pages per run, with the status poll on `FMC_DATA_SEL = 1` ([C7](#1117-c7-ready-procedure-status-poll)) and the status latch repeated without waits: eight pages in order with `0x2e4` overlap and `FMC_DMA_CTRL = 7` before the last DMA, pages 9 and 11, and pages 1 and 3. Every page was correct.
 - A run that polled with `FMC_DATA_SEL = 0x100` (left over from the data transfer): the latch returned `0x70` instead of the status ([chapter 7, section 7.1](07-events-and-waits.md#71-wait-events)). The poll ended while the chip was still programming, and the chip ignored the next `80h` (that page read back erased). There is no page-order rule: with a correct poll, multi-page writes are correct.
-- Program time (device, one run per page over every page of three blocks, CE0 and CE1, [D-progtime-35](14-evidence.md#142148-progtime-run-35)): the run times fall into two groups in a fixed pattern.
+- Program time (device, one run per page over every page of three blocks, CE0 and CE1, [`progtime`](14-evidence.md#142148-progtime-run-35)): the run times fall into two groups in a fixed pattern.
   - Pages 0 to 3 and then every pair 6-7, 10-11, ..., 122-123 take about 478 us per run.
   - Pages 4-5, 8-9, ..., 124-125 and 126-127 take 728 to 873 us (CE1 50 to 90 us slower than CE0).
   - The pattern is the same in all three blocks (inferred: the chip's lower and upper pages of a cell pair).

@@ -8,9 +8,9 @@ Summary: The registers of the NAND controller (FMC): the configuration word, the
 |---|---|---|
 | 0 | controller enable; always 1 | observed |
 | 8:1 | chip enables: which NAND chips the controller talks to (details below the table) | observed / 3p / device |
-| 9 | set in the control word of the original READID program (`0x33201`) and clear in the other original programs. Setting it during a whole page read or a READ ID changed neither the data, the decode results nor the ID ([D-fmcbits-35](14-evidence.md#142143-fmcbits-run-35)) | observed / device; meaning unknown |
+| 9 | set in the control word of the original READID program (`0x33201`) and clear in the other original programs. Setting it during a whole page read or a READ ID changed neither the data, the decode results nor the ID ([`fmcbits`](14-evidence.md#142143-fmcbits-run-35)) | observed / device; meaning unknown |
 | 10 | named "enable DMA" in third-party headers. It is clear in every original program: there, DMA is started through bit 24 and `FMC_DMA_ADDR`. The third-party driver clears it for single-chunk reads | observed / 3p |
-| 11 | set in every original program except READID (the control word `0x801` consists of bit 11 and bit 0). Clearing it during a whole page read or a READ ID changed nothing ([D-fmcbits-35](14-evidence.md#142143-fmcbits-run-35)) | observed / device; meaning unknown |
+| 11 | set in every original program except READID (the control word `0x801` consists of bit 11 and bit 0). Clearing it during a whole page read or a READ ID changed nothing ([`fmcbits`](14-evidence.md#142143-fmcbits-run-35)) | observed / device; meaning unknown |
 | 14:12 | timing: hold ("write pulse") clocks | observed formula ([chapter 12, section 12.3](12-cpu-interface.md#123-timing-word)) |
 | 18:16 | timing: setup clocks | observed formula |
 | 24 | DMA enable: set while the data phase of a run uses DMA, cleared at the end (details below the table) | observed / 3p / device |
@@ -28,7 +28,7 @@ DMA enable (bit 24, device):
 
 - With bit 24 clear, no DMA runs at all. This holds in both directions (`0x2e0` system memory to data buffer, `0x100` or `0x1e0` data buffer to system memory) and in both register sets. `FMC_STATUS` bit 20 never sets, so the `wait` times out.
 - With bit 24 set, the same transfers complete (512 bytes, data intact).
-- Leaving bit 24 set through a whole page read (chip transfers included) changed nothing ([D-fmcbits-35](14-evidence.md#142143-fmcbits-run-35)).
+- Leaving bit 24 set through a whole page read (chip transfers included) changed nothing ([`fmcbits`](14-evidence.md#142143-fmcbits-run-35)).
 
 The programs load `0x801 | timing` once and then change the CE bits with a read-modify-write that preserves every other bit. A control word with bit 0 clear is not usable.
 
@@ -68,18 +68,18 @@ Codes that are not in this table (for example `0x12`, `0x42`, `0x180` and `0x1a0
 | `0x02c` | `FMC_ANUM` | address cycles minus 1 |
 | `0x030` | `FMC_DNUM` | transfer length minus 1 of NAND transfers (`0xf` = 16 bytes, `0x1ff` = 512, `7` = 8); 13 bits writable (device). It does not set the DMA length (below the table) |
 | `0x034` | `FMC_DMA_ADDR` | bus address of the next DMA transfer. The original programs write it once per 2 KiB unit, so the controller must advance the address by 512 internally after each data buffer DMA. After a single 512-byte DMA the register still reads the value written (device) |
-| `0x038` | `FMC_DMA_CTRL` | the original programs and the third-party driver write 7 before the last DMA of a run (observed). In a page read test (device, [D-fmcbits-35](14-evidence.md#142143-fmcbits-run-35)), the values 0 and 7 deliver correct data, and 7 adds about 100 us. The value `0xff` hangs the DMA: the wait times out and that sector is wrong. Each bit alone, written before every data DMA of a page read (device, [D-dmactl-37](14-evidence.md#142164-dmactl-run-37)): bit 0 and bit 3 deliver correct data (bit 0 adds about 60 us, bit 3 about 120 us per page); bit 1 and bit 2 deliver the first sector correctly, then every later DMA times out, and the register then reads `0x42` and `0x84` (bit 6 or bit 7 set as well); each of bits 4..7 makes every DMA time out. The value persists between runs. Meaning unknown |
+| `0x038` | `FMC_DMA_CTRL` | the original programs and the third-party driver write 7 before the last DMA of a run (observed). In a page read test (device, [`fmcbits`](14-evidence.md#142143-fmcbits-run-35)), the values 0 and 7 deliver correct data, and 7 adds about 100 us. The value `0xff` hangs the DMA: the wait times out and that sector is wrong. Each bit alone, written before every data DMA of a page read (device, [`dmactl`](14-evidence.md#142164-dmactl-run-37)): bit 0 and bit 3 deliver correct data (bit 0 adds about 60 us, bit 3 about 120 us per page); bit 1 and bit 2 deliver the first sector correctly, then every later DMA times out, and the register then reads `0x42` and `0x84` (bit 6 or bit 7 set as well); each of bits 4..7 makes every DMA time out. The value persists between runs. Meaning unknown |
 | `0x048` | `FMC_STATUS` | event flags, write-1-to-clear ([chapter 9, section 9.4](#94-fmc_status-bits)) |
 | `0x04c` | `FMC_NSTAT` | last NAND status byte latched by `FMCTRL1` = `0xca` (NAND status bits: bit 0 and bit 1 are fail flags, bit 5 is array ready, bit 6 is ready) |
 | `0x060..0x068` | `FMC_META0..2` | 12-byte spare metadata: output of a meta decode, input of a meta encode |
 | `0x078` | `FMC_METACFG` | metadata layout: four 4-bit nibbles, low nibble first. Nibble j names the slot that meta fragment j (3 bytes) is copied from or to. The nibble value is parity buffer number x 4 + slot number (0..7) (inferred, [R6](11-nand-operations.md#1126-r6-meta-layout-word)) |
 | `0x07c` | `FMC_METACTL` | write 1 = meta encode (poll until bit 0 reads 0); write 2 = meta decode (poll until bit 1 reads 0) |
-| `0x080` | `FMC_FIFO` | FIFO port: with `FMCTRL1` = `0x340` and `FMC_DATA_SEL` = `0x100` each read returns the next 4 bytes of a READ ID transfer; reads returned 0 for data buffers filled by DMA, and each read advances `FMC_28` by 4 ([D-bufport-36](14-evidence.md#142154-bufport-run-36); [chapter 1, section 1.5](01-overview.md#15-named-parts-of-the-data-path)) |
+| `0x080` | `FMC_FIFO` | FIFO port: with `FMCTRL1` = `0x340` and `FMC_DATA_SEL` = `0x100` each read returns the next 4 bytes of a READ ID transfer; reads returned 0 for data buffers filled by DMA, and each read advances `FMC_28` by 4 ([`bufport`](14-evidence.md#142154-bufport-run-36); [chapter 1, section 1.5](01-overview.md#15-named-parts-of-the-data-path)) |
 
 Notes on the registers (device unless stated; [chapter 16, section 16.2](16-device-findings.md#162-settled-on-a-device)):
 
-- `FMC_28` is also the read position of the FIFO port: each read of `FMC_FIFO` (`0x080`) advances it by 4, and it wraps at 512 (it read 0, 128, 256, 384 and 0 after each 32 reads, [D-bufport-36](14-evidence.md#142154-bufport-run-36)). While a program runs without reading `0x080` it does not change, except that a DMA and the set-up word set it to 0.
-- Between the CPU's dump of the register window before a run and the start of the run, it advanced by 248. Between the end of the run and the CPU's dump after the run, it advanced by 124 ([D-fmc28b-35](14-evidence.md#142135-fmc28b-run-35)).
+- `FMC_28` is also the read position of the FIFO port: each read of `FMC_FIFO` (`0x080`) advances it by 4, and it wraps at 512 (it read 0, 128, 256, 384 and 0 after each 32 reads, [`bufport`](14-evidence.md#142154-bufport-run-36)). While a program runs without reading `0x080` it does not change, except that a DMA and the set-up word set it to 0.
+- Between the CPU's dump of the register window before a run and the start of the run, it advanced by 248. Between the end of the run and the CPU's dump after the run, it advanced by 124 ([`fmc28b`](14-evidence.md#142135-fmc28b-run-35)).
 - It advanced by exactly 128 over 128 iterations of a `pld`/`sti` loop, and by `0x7c` per probe run.
 - In programs that write the set-up word first, it stayed 0 over 32 repetitions each of plain instructions, `sti`, `ldi`, parameter-RAM writes, DMAs, ECC encodes and 16-byte chip reads.
 - The CPU's dumps of the whole window read `0x080` and its mirrors, which fits the advances between runs (inferred).
@@ -101,8 +101,8 @@ Two combined values occur, which alternate the two data buffers: `0x102` (fill d
 
 Drain selects on a page read (device):
 
-- With `FMC_DMA_CTRL` = 0, 1 or 8, the drain select `0x1e0` delivered correct data in every sector, and so did the combined values used as the original READ uses them: each sector read with `0x201` / `0x102` into data buffer 0 / 1, decoded there and copied out with `0x102` / `0x201` ([D-dmactl-37](14-evidence.md#142164-dmactl-run-37)).
-- In device run 35, `0x102` and `0x1e0` delivered wrong data in every sector and left `FMC_DMA_CTRL` reading `0xf` ([D-fmcbits-35](14-evidence.md#142143-fmcbits-run-35)). That read followed the case that wrote `FMC_DMA_CTRL` = `0xff`, a value that persists and makes every DMA fail (inferred cause).
+- With `FMC_DMA_CTRL` = 0, 1 or 8, the drain select `0x1e0` delivered correct data in every sector, and so did the combined values used as the original READ uses them: each sector read with `0x201` / `0x102` into data buffer 0 / 1, decoded there and copied out with `0x102` / `0x201` ([`dmactl`](14-evidence.md#142164-dmactl-run-37)).
+- In `fmcbits`, `0x102` and `0x1e0` delivered wrong data in every sector and left `FMC_DMA_CTRL` reading `0xf` ([`fmcbits`](14-evidence.md#142143-fmcbits-run-35)). That read followed the case that wrote `FMC_DMA_CTRL` = `0xff`, a value that persists and makes every DMA fail (inferred cause).
 
 The controller has two 512-byte data buffers and two parity buffers of four 16-byte slots each. The buffers belong to no chip enable (observed / 3p).
 
@@ -121,15 +121,15 @@ The controller has two 512-byte data buffers and two parity buffers of four 16-b
 All flags are levels: a `wait` passes while its flag is set and does not clear it (device).
 
 - After power-on, `FMC_STATUS` reads `0x000c3000` (bits 12, 13, 18 and 19; meaning open). These four bits are also set after a soft reset, and writing 1 to them does not clear them.
-- A 16-byte data read from the chip (`FMCTRL1` = `0x32`) clears bits 13 and 19; a 512-byte data read (`0xe2`) clears all four. After the 16-byte read, a DMA into a data buffer or a parity buffer, a status latch and the set-up word set bits 13 and 19 again; a DMA out of a data buffer, an ECC encode, a command and a second-set data read do not ([D-fmcstat2-37](14-evidence.md#142165-fmcstat2-run-37)).
-- With all four bits set, a command, an address, a status latch, a DMA, an ECC encode, a meta encode and a command in the second register set leave them set ([D-fmcstat-35](14-evidence.md#142144-fmcstat-run-35)).
+- A 16-byte data read from the chip (`FMCTRL1` = `0x32`) clears bits 13 and 19; a 512-byte data read (`0xe2`) clears all four. After the 16-byte read, a DMA into a data buffer or a parity buffer, a status latch and the set-up word set bits 13 and 19 again; a DMA out of a data buffer, an ECC encode, a command and a second-set data read do not ([`fmcstat2`](14-evidence.md#142165-fmcstat2-run-37)).
+- With all four bits set, a command, an address, a status latch, a DMA, an ECC encode, a meta encode and a command in the second register set leave them set ([`fmcstat`](14-evidence.md#142144-fmcstat-run-35)).
 - The second register set ([chapter 9, section 9.5](#95-the-second-nand-controller-register-set-0x400)) has the same flags in its own status word `0x448`. These flags drive `wait` events 6 (bit 1), 7 (bit 2), 8 (bit 20) and 9 (bit 3) (device, [chapter 7, section 7.1](07-events-and-waits.md#71-wait-events)).
 - In some runs a status latch failed to raise `wait` event 5, and `FMC_STATUS` showed bit 24 (`0x01000000`) instead of bit 23.
-  - In one series this happened in every run where a NAND controller or ECC interrupt enable (`0x044`, `0x844`) had been written, and in none without one.
-  - It also occurred in single runs with no enable written.
-  - In fifteen other runs, with and without enables, it did not occur.
+  - In [`irqsrc`](14-evidence.md#142101-irqsrc-run-27) it happened in both status-latch programs that had an interrupt enable written (`0x044` = `0xffff` or `0x844` = `0x2f`), and not in the one without.
+  - In [`op16`](14-evidence.md#14289-op16-run-23) it occurred in a status-latch program with no enable written.
+  - In the fifteen programs of [`ev5en`](14-evidence.md#142109-ev5en-run-28) (five enable settings, three times each) it did not occur.
   - The cause is open ([chapter 17](17-open-questions.md#172-events-and-the-status-latch), item 12). One possible explanation, not tested, is a status latch made without a fresh arm of `wait` event 5 ([chapter 7, section 7.1](07-events-and-waits.md#71-wait-events)).
-  - In run 35, 160 latches (with and without `0x044` / `0x844` written) all set bit 23 and none set bit 24 ([D-latchrep-35](14-evidence.md#142141-latchrep-run-35)).
+  - In `latchrep`, 160 latches (with and without `0x044` / `0x844` written), all set bit 23 and none set bit 24 ([`latchrep`](14-evidence.md#142141-latchrep-run-35)).
 
 ## 9.5 The second NAND controller register set (`0x400`)
 
@@ -151,19 +151,19 @@ Further device results:
 
 - Its state machine runs: a READ ID through it sends the command (`0x448` bit 1) and the address cycles (bit 2) and moves the 8 bytes (bit 3; `0x424` counts them).
 - Its flags drive `wait` events 6 (command), 7 (address), 8 (DMA) and 9 (transfer), as `wait` events 0, 1, 2 and 3 do for the first set. The `evjmp` instruction reacts to them.
-- It has its own DMA engine and its own data buffers 0 and 1: system memory to buffer to system memory works through it with its own `FMC_CTRL0` bit 24 set. Its parity buffers 0 and 1 return a pattern DMA-ed into them; parity buffer 0 is shared with the first register set (inferred: after the second set's DMA into its parity buffer 0, the first set's parity buffer 0 read the second set's pattern, [D-ch1buf-37](14-evidence.md#142166-ch1buf-run-37)).
+- It has its own DMA engine and its own data buffers 0 and 1: system memory to buffer to system memory works through it with its own `FMC_CTRL0` bit 24 set. Its parity buffers 0 and 1 return a pattern DMA-ed into them; parity buffer 0 is shared with the first register set (inferred: after the second set's DMA into its parity buffer 0, the first set's parity buffer 0 read the second set's pattern, [`ch1buf`](14-evidence.md#142166-ch1buf-run-37)).
 - No chip answered on its bus on any chip enable when only the channel-0 pins were configured; its FIFO port returned junk.
 
 The second register set is channel 1 of the NAND controller, on its own pins. The boot ROM's NAND boot routine takes a channel number, 0 or 1 (`bootrom mem:0x20002e0c`: `channel < 2`). The routine reads pages from CE0 of that channel into SRAM with a page reader that addresses the registers at `channel * 0x400` ([RE-43](14-evidence.md#14343-re-43-boot-rom-nand-access)). The routine's pin set-up (`bootrom mem:0x20001830`; GPIO configuration words at `0x3cf00000 + port * 0x20`, function 2 per 4-bit field) differs per channel:
 
-Which device the boot ROM boots from is set by two strap pins, GPIO port 3 pins 6 and 7 ([RE-47](14-evidence.md#14347-re-47-boot-rom-boot-device-selection)): 0 / 0 SPI flash on SPI port 0, 0 / 1 SPI flash on SPI port 2, 1 / 0 NAND channel 0, 1 / 1 NAND channel 1. On this unit both pins read 0, so it boots from the SPI flash ([D-straps-37](14-evidence.md#142169-straps-run-37)).
+Which device the boot ROM boots from is set by two strap pins, GPIO port 3 pins 6 and 7 ([RE-47](14-evidence.md#14347-re-47-boot-rom-boot-device-selection)): 0 / 0 SPI flash on SPI port 0, 0 / 1 SPI flash on SPI port 2, 1 / 0 NAND channel 0, 1 / 1 NAND channel 1. On this unit both pins read 0, so it boots from the SPI flash ([`straps`](14-evidence.md#142169-straps-run-37)).
 
 | channel | GPIO ports and pins switched to function 2 |
 |---|---|
 | 0 (`0x000` set) | port 8 all eight pins; port 9 two pins (fields 0 and 4); port 10 pins 0..3 |
 | 1 (`0x400` set) | port 10 pins 4..7; port 11 pins 0..4; port 12 pins 0..3; port 7 pin 4 |
 
-In the first device tests only the channel-0 pins were configured (ports 8, 9 and the lower half of port 10), so the channel-1 controller drove no pins and the FIFO port returned junk ([D-ev8-18](14-evidence.md#14281-ev8-run-18), [D-chan1-15](14-evidence.md#14257-chan1-run-15)). With the channel-1 pins switched as the boot ROM does, a READ ID through the `0x400` set read `0xff` bytes on CE1 to CE7 (an undriven bus) and nothing on CE0 (device). No chip answers on channel 1 of this board, so the nano 3G uses only channel 0 (inferred from the one board).
+In the first device tests only the channel-0 pins were configured (ports 8, 9 and the lower half of port 10), so the channel-1 controller drove no pins and the FIFO port returned junk ([`ev8`](14-evidence.md#14281-ev8-run-18), [`chan1`](14-evidence.md#14257-chan1-run-15)). With the channel-1 pins switched as the boot ROM does, a READ ID through the `0x400` set read `0xff` bytes on CE1 to CE7 (an undriven bus) and nothing on CE0 (device). No chip answers on channel 1 of this board, so the nano 3G uses only channel 0 (inferred from the one board).
 
 The original programs and the original CPU driver never use the second register set, apart from the original CPU driver writing its `FMC_CTRL0` (`0x400`) as 0 at start-up and power-off ([RE-37](14-evidence.md#14337-re-37-cpu-driver-initialisation)).
 

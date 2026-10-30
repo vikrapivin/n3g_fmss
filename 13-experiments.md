@@ -52,6 +52,8 @@ After the end (or the time bound): the after-snapshot (and, if asked for, the fu
 
 ## 13.2 Device runs
 
+A device run is one session on the unit: emCORE is started on the iPod, and one command runs a list of experiments in order. Device runs are numbered in the order they were made. An evidence entry names the experiment and the device run it comes from (for example `D-done5b-37`: experiment `done5b`, device run 37); when an experiment ran in more than one device run, the run number tells the entries apart. Device run 37 repeated the experiments that device run 36 could not complete after the unit stopped answering.
+
 | device run | experiments run in it |
 |---|---|
 | 1 | `regmap`, `clock`, `alu`, `memory`, `indirect`, `control`, `wait`, `unknown` |
@@ -88,6 +90,10 @@ After the end (or the time bound): the after-snapshot (and, if asked for, the fu
 | 32 | `ev5two`, `b15ecc` |
 | 33 | `eccmode4` |
 | 34 | `finale` |
+| 35 | `startdiff`, `startbits`, `rsdecode`, `vic20`, `fmc28b`, `c58b1`, `evsweep2`, `c50fault`, `ctrlwords`, `c08self`, `latchrep`, `irq044`, `fmcbits`, `fmcstat`, `eccregs`, `seqrestart`, `done5`, `progtime`, `regsweep` |
+| 36 | `seqfirst`, `w2state`, `c50b8`, `startregion`, `bufport`, `c58b2`, `stprev`, `tmwait2`, `irqop` |
+| 37 | `done5b`, `rsresult`, `rschip`, `miscorr`, `fullpage`, `dmactl`, `fmcstat2`, `ch1buf`, `evsweep3`, `blk100b`, `straps`, `irqop` |
+| 38 | `w2vic` |
 
 ## 13.3 Experiments
 
